@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>쿠키런 미니게임 - 버튼 조작</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background-color: #cceeff;
+      font-family: 'Arial', sans-serif;
+      overflow: hidden;
+    }
+    .game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(#a0e9ff, #ffffff);
+      overflow: hidden;
+    }
+    .character {
+      position: absolute;
+      bottom: 50px;
+      left: 80px;
+      width: 50px;
+      height: 50px;
+      background-color: orange;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .character.jump {
+      animation: jump 0.6s ease-out;
+    }
+    .character.slide {
+      height: 30px;
+      background-color: darkorange;
+    }
+
+    @keyframes jump {
+      0% { bottom: 50px; }
+      50% { bottom: 180px; }
+      100% { bottom: 50px; }
+    }
+
+    .obstacle {
+      position: absolute;
+      bottom: 50px;
+      width: 30px;
+      height: 50px;
+      background-color: red;
+      left: 100vw;
+      animation: move-left 4s linear;
+    }
+
+    @keyframes move-left {
+      0% { left: 100vw; }
+      100% { left: -50px; }
+    }
+
+    .score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 24px;
+      color: #333;
+    }
+
+    .hearts {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 24px;
+      color: red;
+    }
+
+    .game-over {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      color: red;
+      display: none;
+    }
+
+    /* 버튼 UI */
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 20px;
+      z-index: 20;
+    }
+
+    .control-button {
+      font-size: 18px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      background-color: #ff9900;
+      color: white;
+      box-shadow: 0 4px #cc7a00;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .control-button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px #cc7a00;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container" id="game">
+    <div class="score" id="score">점수: 0</div>
+    <div class="hearts" id="hearts">❤️❤️❤️</div>
+    <div class="character" id="character"></div>
+    <div class="game-over" id="gameOverText">Game Over!</div>
+
+    <!-- 점프 / 슬라이딩 버튼 -->
+    <div class="controls">
+      <button class="control-button" onclick="jump()">⬆ 점프</button>
+      <button class="control-button" onclick="slide()">⬇ 슬라이딩</button>
+    </div>
+  </div>
+
+  <script>
+    const character = document.getElementById('character');
+    const game = document.getElementById('game');
+    const gameOverText = document.getElementById('gameOverText');
+    const scoreText = document.getElementById('score');
+    const heartsText = document.getElementById('hearts');
+
+    let isJumping = false;
+    let isSliding = false;
+    let gameOver = false;
+    let score = 0;
+    let hearts = 3;
+
+    function updateScore() {
+      if (gameOver) return;
+      score += 1;
+      scoreText.textContent = `점수: ${score}`;
+    }
+
+    function updateHearts() {
+      heartsText.textContent = '❤️'.repeat(hearts);
+    }
+
+    function gameOverHandler() {
+      gameOver = true;
+      gameOverText.style.display = 'block';
+    }
+
+    // 점프
+    function jump() {
+      if (!isJumping && !isSliding && !gameOver) {
+        isJumping = true;
+        character.classList.add('jump');
+        setTimeout(() => {
+          character.classList.remove('jump');
+          isJumping = false;
+        }, 600);
+      }
+    }
+
+    // 슬라이딩
+    function slide() {
+      if (!isSliding && !isJumping && !gameOver) {
+        isSliding = true;
+        character.classList.add('slide');
+        setTimeout(() => {
+          character.classList.remove('slide');
+          isSliding = false;
+        }, 600);
+      }
+    }
+
+    // 키보드 조작도 유지
+    document.addEventListener('keydown', function(e) {
+      if (e.code === 'Space') jump();
+      if (e.code === 'ArrowDown') slide();
+    });
+
+    // 장애물 생성
+    function createObstacle() {
+      if (gameOver) return;
+
+      const obstacle = document.createElement('div');
+      obstacle.classList.add('obstacle');
+      game.appendChild(obstacle);
+
+      obstacle.style.animationDuration = (Math.random() * 1 + 3) + "s";
+
+      const checkCollision = setInterval(() => {
+        const obstacleRect = obstacle.getBoundingClientRect();
+        const characterRect = character.getBoundingClientRect();
+
+        if (
+          obstacleRect.left < characterRect.right &&
+          obstacleRect.right > characterRect.left &&
+          obstacleRect.bottom > characterRect.top + 10 &&
+          obstacleRect.top < characterRect.bottom - 10
+        ) {
+          // 충돌
+          clearInterval(checkCollision);
+          obstacle.remove();
+
+          hearts -= 1;
+          updateHearts();
+          if (hearts <= 0) {
+            gameOverHandler();
+          }
+        }
+
+        if (obstacleRect.right < 0) {
+          clearInterval(checkCollision);
+          obstacle.remove();
+        }
+      }, 50);
+
+      setTimeout(createObstacle, Math.random() * 2000 + 1500);
+    }
+
+    // 점수 타이머
+    setInterval(() => {
+      if (!gameOver) updateScore();
+    }, 500);
+
+    updateHearts();
+    createObstacle();
+  </script>
+</body>
+</html>
